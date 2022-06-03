@@ -1,19 +1,39 @@
-package com.example;
+package com.snailmanmode;
 
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
 
-@ConfigGroup("example")
-public interface ExampleConfig extends Config
+@ConfigGroup("snail")
+public interface SnailManModeConfig extends Config
 {
 	@ConfigItem(
-		keyName = "greeting",
-		name = "Welcome Greeting",
-		description = "The message to show to the user when they login"
+		keyName = "xPos",
+		name = "X Position",
+		description = "The snail's x coordinate."
 	)
-	default String greeting()
+	default int xPos()
 	{
-		return "Hello";
+		return SnailManModePlugin.snailXPosition;
+	}
+
+	@ConfigItem(
+			keyName = "yPos",
+			name = "Y Position",
+			description = "The snail's y coordinate."
+	)
+	default int yPos()
+	{
+		return SnailManModePlugin.snailYPosition;
+	}
+
+	@ConfigItem(
+			keyName = "spawnSnail",
+			name = "Spawn Snail",
+			description = "Spawn the Snail."
+	)
+	default void spawnSnail()
+	{
+		SnailManModePlugin.spawnSnail();
 	}
 }
