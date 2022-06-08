@@ -3,37 +3,71 @@ package com.snailmanmode;
 import net.runelite.client.config.Config;
 import net.runelite.client.config.ConfigGroup;
 import net.runelite.client.config.ConfigItem;
+import net.runelite.client.config.Range;
+
+import java.awt.*;
 
 @ConfigGroup("snail")
 public interface SnailManModeConfig extends Config
 {
 	@ConfigItem(
-		keyName = "xPos",
-		name = "X Position",
-		description = "The snail's x coordinate."
+			keyName = "showTile",
+			name = "Show Tile",
+			description = "Show the snail's tile"
 	)
-	default int xPos()
+	default boolean showTile()
 	{
-		return SnailManModePlugin.snailXPosition;
+		return true;
+	}
+	@ConfigItem(
+			keyName = "showPath",
+			name = "Show Path",
+			description = "Show the snail's path"
+	)
+	default boolean showPath()
+	{
+		return false;
+	}
+	@ConfigItem(
+			keyName = "tileBorderColor",
+			name = "Tile Border Color",
+			description = "The snail's tile border color."
+	)
+	default Color color()
+	{
+		return new Color(255, 0,0,250);
 	}
 
 	@ConfigItem(
-			keyName = "yPos",
-			name = "Y Position",
-			description = "The snail's y coordinate."
+			keyName = "fillColor",
+			name = "Fill Color",
+			description = "The snail's tile fill color."
 	)
-	default int yPos()
+	default Color fillColor()
 	{
-		return SnailManModePlugin.snailYPosition;
+		return new Color(255, 0,0,50);
+	}
+
+	@Range(
+			min = 1
+	)
+	@ConfigItem(
+			keyName = "speed",
+			name = "Speed",
+			description = "The snail's speed in ticks."
+	)
+	default int speed()
+	{
+		return 1;
 	}
 
 	@ConfigItem(
-			keyName = "spawnSnail",
-			name = "Spawn Snail",
-			description = "Spawn the Snail."
+			keyName = "diagonalMovement",
+			name = "Move Diagonally",
+			description = "The snail can move X and Y on the same tick."
 	)
-	default void spawnSnail()
+	default boolean diagonalMovement()
 	{
-		SnailManModePlugin.spawnSnail();
+		return true;
 	}
 }
