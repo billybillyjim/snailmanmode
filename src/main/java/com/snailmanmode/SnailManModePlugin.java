@@ -60,6 +60,7 @@ public class SnailManModePlugin extends Plugin
 	public static boolean lostGame = false;
 	public static ArrayList planeChangeLocations = new ArrayList();
 	public static List<WorldPoint> path = new ArrayList();
+	public static WorldPoint playerLastPosition;
 	public static boolean recalculatePath = false;
 	private int snailmanIconOffset = -1;
 	//public static int speed = 1;
@@ -258,19 +259,19 @@ public class SnailManModePlugin extends Plugin
 
 		}
 		else{
-			createSnailObject();
+			clientThread.invoke(this::createSnailObject);
 		}
 
 		if(playerLastTickPlane != playerPos.getPlane()){
 			changedPlanes = true;
-			planeChangeLocations.add(playerPos);
+			planeChangeLocations.add(playerLastPosition);
 
 		}
 		if(playerPos.getPlane() == currentFloor){
 			planeChangeLocations.clear();
 		}
 		playerLastTickPlane = playerPos.getPlane();
-
+		playerLastPosition = playerPos;
 	}
 
 	@Subscribe
@@ -278,7 +279,7 @@ public class SnailManModePlugin extends Plugin
 	{
 		if (gameStateChanged.getGameState() == GameState.LOGGED_IN)
 		{
-			createSnailObject();
+			clientThread.invoke(this::createSnailObject);
 			recalculatePath = true;
 		}
 	}
@@ -356,10 +357,14 @@ public class SnailManModePlugin extends Plugin
 				if(planeChangeLocations.size() > 0){
 					currentFloor = ((WorldPoint)planeChangeLocations.get(0)).getPlane();
 					planeChangeLocations.remove(0);
+					clientThread.invoke(this::createSnailObject);
 				}
 			}
 		}
-
+		configManager.setConfiguration("Snail", "xPos", snailXPosition);
+		configManager.setConfiguration("Snail", "yPos", snailYPosition);
+		log.debug("Snail Pos: {}, {}, {}", snailXPosition, snailYPosition, currentFloor);
+		log.debug("Time to pos: {}", Math.sqrt(Math.pow(point.getX() - snailXPosition, 2) + Math.pow(point.getY() - snailYPosition, 2)));
 	}
 	public void updateRotation(WorldPoint targetPos){
 		if(currentSnailModel == null){
@@ -447,12 +452,48 @@ public class SnailManModePlugin extends Plugin
 				break;
 			}
 		}
-		configManager.setConfiguration("Snail", "xPos", snailXPosition);
-		configManager.setConfiguration("Snail", "yPos", snailYPosition);
+
+
 		if(data == null){
 			return;
 		}
 
+	}
+
+	public static List<WorldPoint> getDirectPath(){
+		ArrayList directPath = new ArrayList();
+		WorldPoint p = new WorldPoint(snailXPosition, snailYPosition, currentFloor);
+		WorldPoint player = playerLastPosition;
+		if(planeChangeLocations.size() > 0){
+			player = (WorldPoint)planeChangeLocations.get(0);
+		}
+
+		int x = snailXPosition;
+		int y = snailYPosition;
+		while(!worldPointsAreEqual(p, player, false)){
+			if(player.getX() > p.getX()){
+				x++;
+			}
+			else if(player.getX() < p.getX()){
+				x--;
+			}
+			if(player.getY() > p.getY()){
+				y++;
+			}
+			else if(player.getY() < p.getY()){
+				y--;
+			}
+			p = new WorldPoint(x,y, currentFloor);
+			directPath.add(p);
+		}
+		return directPath;
+	}
+
+	public static boolean worldPointsAreEqual(WorldPoint wp1, WorldPoint wp2, boolean plane){
+		if(plane){
+			return wp1.getX() == wp2.getX() && wp1.getY() == wp2.getY() && wp1.getPlane() == wp2.getPlane();
+		}
+		return wp1.getX() == wp2.getX() && wp1.getY() == wp2.getY();
 	}
 
 	public class WorldPointPath {

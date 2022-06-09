@@ -30,9 +30,17 @@ public class SnailManModeOverlay  extends Overlay {
     public Dimension render(Graphics2D graphics)
     {
         if(config.showPath()){
+            if(SnailManModePlugin.path.size() > 0){
+                for(WorldPoint wp:
+                        SnailManModePlugin.path){
+                    renderTile(graphics, LocalPoint.fromWorld(client, wp.getX(), wp.getY()), config.color(), 2, config.fillColor());
+                }
+            }
+        else{
             for(WorldPoint wp:
-                    SnailManModePlugin.path){
-                renderTile(graphics, LocalPoint.fromWorld(client, wp.getX(), wp.getY()), config.color(), 2, config.fillColor());
+                        SnailManModePlugin.getDirectPath()){
+                    renderTile(graphics, LocalPoint.fromWorld(client, wp.getX(), wp.getY()), config.color(), 2, config.fillColor());
+                }
             }
         }
 
