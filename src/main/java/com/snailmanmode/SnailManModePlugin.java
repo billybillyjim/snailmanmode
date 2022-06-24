@@ -173,9 +173,18 @@ public class SnailManModePlugin extends Plugin
 		overlayManager.add(overlay);
 		overlayManager.add(loseOverlay);
 		configManager.setConfiguration("Snail", "lost", false);
-		snailXPosition = Integer.parseInt(configManager.getConfiguration("Snail", "xPos"));
-		snailYPosition = Integer.parseInt(configManager.getConfiguration("Snail", "yPos"));
-		lostGame = Boolean.parseBoolean(configManager.getConfiguration("Snail", "lost"));
+		snailXPosition = 3400;
+		snailYPosition = 3400;
+		lostGame = false;
+		try
+		{
+			snailXPosition = Integer.parseInt(configManager.getConfiguration("Snail", "xPos"));
+			snailYPosition = Integer.parseInt(configManager.getConfiguration("Snail", "yPos"));
+			lostGame = Boolean.parseBoolean(configManager.getConfiguration("Snail", "lost"));
+		}
+		catch(Exception e){
+
+		}
 		log.debug("Setting Snail pos:" + snailXPosition + "," + snailYPosition);
 		loadResources();
 		clientThread.invoke(() ->
