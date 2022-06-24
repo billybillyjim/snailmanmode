@@ -304,14 +304,11 @@ public class SnailManModePlugin extends Plugin
 	public void moveSnailTowardPoint(WorldPoint point)
 	{
 		ticksSinceLastMove++;
-		int xDist = 0;
-		int yDist = 0;
+		int xDist = Math.abs(point.getX() - snailXPosition);
+		int yDist = Math.abs(point.getY() - snailYPosition);
 		boolean moveX = true;
 
 		if(!config.diagonalMovement()){
-
-			xDist = Math.abs(point.getX() - snailXPosition);
-			yDist = Math.abs(point.getY() - snailYPosition);
 			moveX = xDist > yDist;
 		}
 		if(recalculatePath){
@@ -330,20 +327,32 @@ public class SnailManModePlugin extends Plugin
 				path.remove(0);
 			}
 			else{
+				double dist = Math.sqrt(Math.pow(xDist, 2) + Math.pow(yDist, 2));
+				log.debug("Distance: {}, {}, {}", xDist, yDist, dist);
+				int moveTileCount = (int)Math.max((dist / 1000) + 1, 1);
+				int x = moveTileCount;
+				int ticks = 0;
+				double tileDist = dist;
+				while(tileDist > 0){
+					ticks++;
+					tileDist -= x;
+					x = (int)(tileDist / 1000) + 1;
+				}
+				log.debug("Ticks to you: {}", ticks);
 				if(point.getX() > snailXPosition && (moveX || config.diagonalMovement())){
-					snailXPosition++;
+					snailXPosition += moveTileCount;
 					ticksSinceLastMove = 0;
 				}
 				else if(point.getX() < snailXPosition && (moveX || config.diagonalMovement())){
-					snailXPosition--;
+					snailXPosition -= moveTileCount;
 					ticksSinceLastMove = 0;
 				}
 				if(point.getY() > snailYPosition && (!moveX || config.diagonalMovement())){
-					snailYPosition++;
+					snailYPosition += moveTileCount;
 					ticksSinceLastMove = 0;
 				}
 				else if(point.getY() < snailYPosition && (!moveX || config.diagonalMovement())){
-					snailYPosition--;
+					snailYPosition -= moveTileCount;
 					ticksSinceLastMove = 0;
 				}
 			}
