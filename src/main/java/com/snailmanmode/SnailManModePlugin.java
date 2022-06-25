@@ -63,6 +63,7 @@ public class SnailManModePlugin extends Plugin
 	public static WorldPoint playerLastPosition;
 	public static boolean recalculatePath = false;
 	private int snailmanIconOffset = -1;
+	private static boolean firstGameTick = true;
 	//public static int speed = 1;
 	//public static boolean diagonalMovement = true;
 
@@ -145,6 +146,7 @@ public class SnailManModePlugin extends Plugin
 			snailObject.setShouldLoop(true);
 			snailObject.setLocation(lp, currentFloor);
 			snailObject.setActive(true);
+			previousRotation = 0;
 			final WorldPoint playerPos = client.getLocalPlayer().getWorldLocation();
 			int xDist = Math.abs(playerPos.getX() - snailXPosition);
 			int yDist = Math.abs(playerPos.getY() - snailYPosition);
@@ -152,9 +154,11 @@ public class SnailManModePlugin extends Plugin
 			if(xMove){
 				if(playerPos.getX() - snailXPosition > 0){
 					currentSnailModel.rotateY270Ccw();
+					previousRotation = 270;
 				}
 				else{
 					currentSnailModel.rotateY90Ccw();
+					previousRotation = 90;
 				}
 			}
 			else{
@@ -162,6 +166,7 @@ public class SnailManModePlugin extends Plugin
 				}
 				else{
 					currentSnailModel.rotateY180Ccw();
+					previousRotation = 180;
 				}
 			}
 		}
@@ -175,12 +180,16 @@ public class SnailManModePlugin extends Plugin
 		configManager.setConfiguration("Snail", "lost", false);
 		snailXPosition = 3400;
 		snailYPosition = 3400;
+		currentFloor = 0;
 		lostGame = false;
 		try
 		{
+
 			snailXPosition = Integer.parseInt(configManager.getConfiguration("Snail", "xPos"));
 			snailYPosition = Integer.parseInt(configManager.getConfiguration("Snail", "yPos"));
 			lostGame = Boolean.parseBoolean(configManager.getConfiguration("Snail", "lost"));
+			currentFloor = Integer.parseInt(configManager.getConfiguration("Snail", "currentFloor"));
+			LoadWorldPointListFromString(configManager.getConfiguration("Snail", "worldPoints"));
 		}
 		catch(Exception e){
 
@@ -209,6 +218,10 @@ public class SnailManModePlugin extends Plugin
 		if(lostGame){
 			return;
 		}
+		if(firstGameTick){
+			firstGameTick = false;
+			return;
+		}
 		if(SNAIL_LOCATION_ICON == null){
 			LoadSnailImage();
 		}
@@ -219,10 +232,18 @@ public class SnailManModePlugin extends Plugin
 			return;
 		}
 		if(changedPlanes && planeChangeLocations.size() > 0){
-			moveSnailTowardPoint((WorldPoint)planeChangeLocations.get(0));
+			WorldPoint pcl = (WorldPoint)planeChangeLocations.get(0);
+			if(pcl != null){
+				moveSnailTowardPoint(pcl);
+			}
+			else{
+				log.debug("PCL was null!");
+				moveSnailTowardPoint(playerPos);
+			}
+
 		}
 		else{
-			moveSnailTowardPoint(playerPos);
+
 			if(playerPos.getX() == snailXPosition &&
 			   playerPos.getY() == snailYPosition)
 			{
@@ -230,6 +251,7 @@ public class SnailManModePlugin extends Plugin
 				configManager.setConfiguration("Snail", "lost", true);
 				log.debug("Game Over");
 			}
+			moveSnailTowardPoint(playerPos);
 		}
 
 		final LocalPoint playerPosLocal = LocalPoint.fromWorld(client, playerPos);
@@ -275,6 +297,9 @@ public class SnailManModePlugin extends Plugin
 			changedPlanes = true;
 			planeChangeLocations.add(playerLastPosition);
 
+		}
+		else if(currentFloor == playerPos.getPlane()){
+			changedPlanes = false;
 		}
 		if(playerPos.getPlane() == currentFloor){
 			planeChangeLocations.clear();
@@ -366,21 +391,38 @@ public class SnailManModePlugin extends Plugin
 				}
 			}
 			if(ticksSinceLastMove == 0){
-				calculatePath(LocalPoint.fromWorld(client, point));
+				LocalPoint lp = LocalPoint.fromWorld(client, point);
+				if(lp != null){
+					calculatePath(lp);
+				}
 			}
 
 			updateRotation(point);
 
 			if(snailYPosition == point.getY() && snailXPosition == point.getX()){
 				if(planeChangeLocations.size() > 0){
-					currentFloor = ((WorldPoint)planeChangeLocations.get(0)).getPlane();
+					if(planeChangeLocations.size() > 1){
+						currentFloor = ((WorldPoint)planeChangeLocations.get(1)).getPlane();
+					}
+					else{
+						currentFloor = client.getLocalPlayer().getWorldLocation().getPlane();
+					}
+
 					planeChangeLocations.remove(0);
 					clientThread.invoke(this::createSnailObject);
+				}
+				else
+				{
+					lostGame = true;
+					configManager.setConfiguration("Snail", "lost", true);
+					log.debug("Game Over");
 				}
 			}
 		}
 		configManager.setConfiguration("Snail", "xPos", snailXPosition);
 		configManager.setConfiguration("Snail", "yPos", snailYPosition);
+		configManager.setConfiguration("Snail", "currentFloor", currentFloor);
+		configManager.setConfiguration("Snail", "worldPoints", WorldPointListToString());
 		log.debug("Snail Pos: {}, {}, {}", snailXPosition, snailYPosition, currentFloor);
 		log.debug("Time to pos: {}", Math.sqrt(Math.pow(point.getX() - snailXPosition, 2) + Math.pow(point.getY() - snailYPosition, 2)));
 	}
@@ -425,13 +467,15 @@ public class SnailManModePlugin extends Plugin
 	public void calculatePath(LocalPoint point){
 
 		LocalPoint startPos = LocalPoint.fromWorld(client, snailXPosition, snailYPosition);
-		if(startPos == null){
+		if(startPos == null || point == null){
+			log.debug("No Starting Position or Point was null.");
 			return;
 		}
 
 		CollisionData[] data = client.getCollisionMaps();
 		CollisionData floorData = data[currentFloor];
 		WorldPoint worldPoint = new WorldPoint(snailXPosition, snailYPosition, currentFloor);
+
 		WorldPoint goal = WorldPoint.fromLocal(client, point);
 		path = new ArrayList();
 		ArrayDeque frontier = new ArrayDeque();
@@ -482,8 +526,12 @@ public class SnailManModePlugin extends Plugin
 		ArrayList directPath = new ArrayList();
 		WorldPoint p = new WorldPoint(snailXPosition, snailYPosition, currentFloor);
 		WorldPoint player = playerLastPosition;
+
 		if(planeChangeLocations.size() > 0){
-			player = (WorldPoint)planeChangeLocations.get(0);
+			if(planeChangeLocations.get(0) != null){
+				player = (WorldPoint)planeChangeLocations.get(0);
+			}
+
 		}
 
 		int x = snailXPosition;
@@ -508,6 +556,9 @@ public class SnailManModePlugin extends Plugin
 	}
 
 	public static boolean worldPointsAreEqual(WorldPoint wp1, WorldPoint wp2, boolean plane){
+		if(wp1 == null || wp2 == null){
+			log.debug("1:{}, 2:{}", wp1 == null, wp2 == null);
+		}
 		if(plane){
 			return wp1.getX() == wp2.getX() && wp1.getY() == wp2.getY() && wp1.getPlane() == wp2.getPlane();
 		}
@@ -671,6 +722,29 @@ public class SnailManModePlugin extends Plugin
 	{
 		String icon = "<img=" + iconIndex + ">";
 		return icon + name;
+	}
+
+	public String WorldPointListToString(){
+		StringBuilder w = new StringBuilder();
+		for(Object pcl:planeChangeLocations){
+			WorldPoint wp = (WorldPoint)pcl;
+			if(wp != null){
+				w.append(wp.getX() + "," + wp.getY() + "," + wp.getPlane() + ";");
+			}
+
+		}
+		return w.toString();
+	}
+
+	public void LoadWorldPointListFromString(String data){
+		String[] lines = data.split(";");
+		for(String line:lines){
+			String[] d = line.split(",");
+			int x = Integer.parseInt(d[0]);
+			int y = Integer.parseInt(d[1]);
+			int p = Integer.parseInt(d[2]);
+			planeChangeLocations.add(new WorldPoint(x,y,p));
+		}
 	}
 
 	private void loadResources()
