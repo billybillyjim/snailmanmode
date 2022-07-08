@@ -39,7 +39,9 @@ public class SnailManModeOverlay  extends Overlay {
         else{
             for(WorldPoint wp:
                         SnailManModePlugin.getDirectPath()){
-                    renderTile(graphics, LocalPoint.fromWorld(client, wp.getX(), wp.getY()), config.color(), 2, config.fillColor());
+                    if(wp != null){
+                        renderTile(graphics, LocalPoint.fromWorld(client, wp.getX(), wp.getY()), config.color(), 2, config.fillColor());
+                    }
                 }
             }
         }

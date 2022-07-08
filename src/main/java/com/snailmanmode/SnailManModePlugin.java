@@ -558,6 +558,7 @@ public class SnailManModePlugin extends Plugin
 	public static boolean worldPointsAreEqual(WorldPoint wp1, WorldPoint wp2, boolean plane){
 		if(wp1 == null || wp2 == null){
 			log.debug("1:{}, 2:{}", wp1 == null, wp2 == null);
+			return false;
 		}
 		if(plane){
 			return wp1.getX() == wp2.getX() && wp1.getY() == wp2.getY() && wp1.getPlane() == wp2.getPlane();
